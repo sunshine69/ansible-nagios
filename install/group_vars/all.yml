@@ -141,3 +141,22 @@ smc6048r_check_temp_opts: 205,272
 smc6018r_check_cpu_opts: 4,71,339,406
 smc6018r_check_mem_opts: 473,540,607,674,741,808
 smc6018r_check_temp_opts: 205,272
+
+# Except the two commands-common.cfg config all others requires a specific host
+# inventory so if you use it as a share role only remove them.
+
+deploy_monitoring_templates:
+  - commands-common.cfg
+  - commands.cfg
+  - oobservers.cfg
+  - switches.cfg
+  - webservers.cfg
+  - servers.cfg
+  - elkservers.cfg
+  - elasticsearch.cfg
+  - idrac.cfg
+  - supermicro_6018r.cfg
+  - supermicro_6048r.cfg
+  - supermicro_1028r.cfg
+  - jenkins.cfg
+  - dns.cfg`

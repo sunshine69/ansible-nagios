@@ -142,13 +142,13 @@
 
 - name: Find all nagios monitoring templates in custom templates folder
   find:
-    paths: "{{ nagios_templates_path|default(inventory_dir ~ '/../files/nagios/templates/') }}"
-    patterns: "*.j2"
+    paths: "{{ nagios_templates_path|default(inventory_dir ~ '/../templates/nagios/templates/') }}"
   register: nagios_templates
+  connection: local
 
 - name: Generate the nagios monitoring templates from custom templates folder
-  template: src={{ item }}
-            dest=/etc/nagios/conf.d/{{ item|basename }}
+  template: src={{ item.path }}
+            dest=/etc/nagios/conf.d/{{ item.path|basename }}
   with_items: "{{ nagios_templates.files }}"
   register: nagios_needs_restart
   become: true

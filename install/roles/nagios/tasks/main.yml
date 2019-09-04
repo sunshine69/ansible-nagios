@@ -92,6 +92,11 @@
   when: nagios_create_guest_user|bool
   become: true
 
+- name: Create other nagios user
+  command: htpasswd -b /etc/nagios/passwd {{ item.name }} {{ item.password }}
+  with_items: "{{ nagios_users|default([]) }}"
+  become: true
+
 - name: Configure nagios main configuration
   copy: src=nagios.cfg dest=/etc/nagios/nagios.cfg
   become: true

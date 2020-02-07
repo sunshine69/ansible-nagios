@@ -92,38 +92,45 @@
   when: nagios_create_guest_user|bool
   become: true
 
+- name: Create other nagios user
+  command: htpasswd -b /etc/nagios/passwd {{ item.name }} {{ item.password }}
+  with_items: "{{ nagios_users|default([]) }}"
+  become: true
+
 - name: Configure nagios main configuration
   copy: src=nagios.cfg dest=/etc/nagios/nagios.cfg
   become: true
 
-- name: Copy idrac check plugin
-  copy: src=idrac_2.2rc4 dest=/usr/lib64/nagios/plugins/idrac_2.2rc4 mode="a+x"
-  become: true
+- block:
+  - name: Copy idrac check plugin
+    copy: src=idrac_2.2rc4 dest=/usr/lib64/nagios/plugins/idrac_2.2rc4 mode="a+x"
+    become: true
 
-- name: Configure Dell idrac snmp mib file
-  copy: src=idrac-smiv2.mib  dest={{snmp_mib_path}}/ mode=0755
-  become: true
+  - name: Configure Dell idrac snmp mib file
+    copy: src=idrac-smiv2.mib  dest={{snmp_mib_path}}/ mode=0755
+    become: true
 
-- name: Create nagios socket tmp files
-  file:
-    path={{supermicro_ipmicfg_path}}
-    state=directory
-    owner=nagios
-    group=nagios
-    mode=0777
-    seuser=system_u
-  become: true
+  - name: Create nagios socket tmp files
+    file:
+      path={{supermicro_ipmicfg_path}}
+      state=directory
+      owner=nagios
+      group=nagios
+      mode=0777
+      seuser=system_u
+    become: true
 
-- name: Configure SuperMicro IPMI Check
-  copy: src=check_ipmi_sensor dest={{nagios_plugin_path}}/ mode=0755
-  become: true
+  - name: Configure SuperMicro IPMI Check
+    copy: src=check_ipmi_sensor dest={{nagios_plugin_path}}/ mode=0755
+    become: true
 
-- name: Generate the SuperMicro monitoring template
-  template: src={{ item + ".j2" }}
-            dest={{supermicro_ipmicfg_path}}/{{ item }}
-  with_items:
-    - ipmi.cfg
-  become: true
+  - name: Generate the SuperMicro monitoring template
+    template: src={{ item + ".j2" }}
+              dest={{supermicro_ipmicfg_path}}/{{ item }}
+    with_items:
+      - ipmi.cfg
+    become: true
+  when: supermicro_enable_checks|bool
 
 - name: Generate the nagios conf.d directory
   file:
@@ -133,22 +140,24 @@
 - name: Generate the nagios monitoring templates
   template: src={{ item + ".j2" }}
             dest=/etc/nagios/conf.d/{{ item }}
-  with_items:
-    - oobservers.cfg
-    - switches.cfg
-    - webservers.cfg
-    - servers.cfg
-    - commands.cfg
-    - elkservers.cfg
-    - elasticsearch.cfg
-    - idrac.cfg
-    - supermicro_6018r.cfg
-    - supermicro_6048r.cfg
-    - supermicro_1028r.cfg
-    - jenkins.cfg
-    - dns.cfg
+  with_items: "{{ deploy_monitoring_templates }}"
   register: nagios_needs_restart
   become: true
+  when: deploy_monitoring_templates|length > 0
+
+- name: Find all nagios monitoring templates in custom templates folder
+  find:
+    paths: "{{ nagios_templates_path|default(inventory_dir ~ '/../templates/nagios/templates/') }}"
+  register: nagios_templates
+  connection: local
+
+- name: Generate the nagios monitoring templates from custom templates folder
+  template: src={{ item.path }}
+            dest=/etc/nagios/conf.d/{{ item.path|basename }}
+  with_items: "{{ nagios_templates.files }}"
+  register: nagios_needs_restart
+  become: true
+  when: nagios_templates.files|length > 0
 
 - name: Generate the nagios contact template and localhost config
   template: src={{ item + ".j2" }}

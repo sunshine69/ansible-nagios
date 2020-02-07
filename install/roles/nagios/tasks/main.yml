@@ -150,6 +150,7 @@
     paths: "{{ nagios_templates_path|default(inventory_dir ~ '/../templates/nagios/templates/') }}"
   register: nagios_templates
   connection: local
+  become: false
 
 - name: Generate the nagios monitoring templates from custom templates folder
   template: src={{ item.path }}
